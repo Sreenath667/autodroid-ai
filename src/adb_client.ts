@@ -322,11 +322,13 @@ export class ADBClient {
   }
 
   async type(text: string): Promise<void> {
-    // Escape special shell characters for ADB
-    const escaped = text.replace(/([\"\\`$&|;()<>!#~{}[\]*?])/g, "\\$1").replace(/\s/g, "\\ ");
+    // Escape special shell characters for ADB:
+    // This replaces single quotes with `'\''` and wraps the entire string in single quotes
+    const escaped = text.replace(/'/g, "'\\''");
     logger.debug(`Type: "${text}"`);
-    await this.shell(`input text "${escaped}"`);
+    await this.shell(`input text '${escaped}'`);
   }
+
 
   async keyPress(key: string): Promise<void> {
     const androidKey = ANDROID_KEY_EVENTS[key.toLowerCase()];

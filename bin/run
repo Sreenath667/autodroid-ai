@@ -1,10 +1,17 @@
 #!/usr/bin/env node
 
+require("dotenv").config();
+require("dotenv").config({ path: ".env.local", override: true });
+
 const { autoDroid } = require("../dist");
 const { readFile, access } = require("node:fs/promises");
 const yargs = require("yargs");
 const { hideBin } = require("yargs/helpers");
 const { version } = require("../package.json");
+
+// ── Environment ─────────────────────────────────────────────────────
+require("dotenv").config();
+require("dotenv").config({ path: ".env.local", override: true });
 
 // ── Colors ──────────────────────────────────────────────────────────
 const c = {
@@ -57,44 +64,6 @@ const argv = yargs(hideBin(process.argv))
   .example(`$0 ${c.green}"Open Settings"${c.reset} ${c.yellow}-v${c.reset}`, "Verbose logging")
   .help().argv;
 
-function getLLM(provider, modelName) {
-  const defaultModels = {
-    openai: "gpt-4o",
-    anthropic: "claude-3-5-sonnet-20241022",
-    google: "gemini-3-flash-preview",
-    azure: "gpt-4o",
-    openrouter: "anthropic/claude-3.5-sonnet",
-  };
-
-  const model = modelName || defaultModels[provider] || "gpt-4o";
-
-  switch (provider) {
-    case "openai": {
-      const { openai } = require("@ai-sdk/openai");
-      return openai(model);
-    }
-    case "anthropic": {
-      const { anthropic } = require("@ai-sdk/anthropic");
-      return anthropic(model);
-    }
-    case "google": {
-      const { google } = require("@ai-sdk/google");
-      return google(model);
-    }
-    case "azure": {
-      const { azure } = require("@ai-sdk/azure");
-      return azure(model);
-    }
-    case "openrouter": {
-      const { createOpenRouter } = require("@openrouter/ai-sdk-provider");
-      const openrouter = createOpenRouter();
-      return openrouter(model);
-    }
-    default:
-      throw new Error(`Unknown LLM provider: ${provider}`);
-  }
-}
-
 async function run() {
   const input = argv._[0].toString();
   let task;
@@ -111,15 +80,14 @@ async function run() {
   }
 
   console.log(`\n${c.bold}${c.cyan}🤖 AutoDroid AI${c.reset} ${c.dim}v${version}${c.reset}`);
-  console.log(`${c.magenta}🧠 ${argv.llm}${c.reset} ${c.dim}|${c.reset} ${c.yellow}${argv.model || "default model"}${c.reset}`);
+  const modelStr = argv.model || "gemini-3-flash-preview";
+  console.log(`${c.magenta}🧠 Google Gen AI${c.reset} ${c.dim}|${c.reset} ${c.yellow}${modelStr}${c.reset}`);
   console.log(`${c.green}📋 Task:${c.reset} ${task.split("\n")[0]}${task.includes("\n") ? ` ${c.dim}(+${task.split("\n").length - 1} more lines)${c.reset}` : ""}`);
   console.log(`${c.dim}${"─".repeat(50)}${c.reset}\n`);
 
-  const llm = getLLM(argv.llm, argv.model);
-
   const response = await autoDroid({
     task,
-    llm,
+    llm: modelStr,
     maxSteps: argv.maxSteps,
     verbose: argv.verbose,
   });

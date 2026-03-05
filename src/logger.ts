@@ -22,7 +22,7 @@ class Logger {
     private minLevel: LogLevel;
 
     constructor() {
-        this.enabled = false;
+        this.enabled = true;
         this.minLevel = "info";
     }
 
@@ -35,6 +35,7 @@ class Logger {
     setLevel(level: LogLevel) {
         this.minLevel = level;
     }
+
 
     private log(level: LogLevel, message: string, ...args: any[]) {
         if (!this.enabled) return;

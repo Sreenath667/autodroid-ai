@@ -29,23 +29,19 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^1.1.17",
-    "@ai-sdk/azure": "^1.2.7",
-    "@ai-sdk/google": "^1.1.25",
-    "@ai-sdk/openai": "^1.2.5",
-    "@openrouter/ai-sdk-provider": "^0.4.3",
-    "ai": "^4.1.61",
-    "fast-xml-parser": "^5.0.9",
-    "playwright": "^1.51.1",
-    "sharp": "^0.33.5",
-    "tsx": "^4.19.2",
-    "typescript": "^5.7.3",
-    "yargs": "^17.7.2",
-    "zod": "^3.24.2"
+    "@google/genai": "^1.44.0",
+    "dotenv": "^17.3.1",
+    "fast-xml-parser": "^5.4.2",
+    "playwright": "^1.58.2",
+    "sharp": "^0.34.5",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "yargs": "^18.0.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/node": "^22.13.10",
-    "tsup": "^8.4.0"
+    "@types/node": "^25.3.3",
+    "tsup": "^8.5.1"
   },
   "files": [
     "bin",

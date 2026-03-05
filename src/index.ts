@@ -1,8 +1,6 @@
-import { generateText, LanguageModel, tool } from "ai";
-import { z } from "zod";
+import { GoogleGenAI, FunctionDeclaration, Type, Content, Part } from "@google/genai";
 import { ADBClient } from "./adb_client";
 import { createMobileComputer } from "./mobile_computer";
-import { google } from "@ai-sdk/google";
 import { logger } from "./logger";
 import type { MobileUseOptions, MobileUseResult, StepInfo } from "./types";
 export { autoDroid as mobileUse }; // backward compat alias
@@ -57,7 +55,7 @@ Your job is to navigate the device and perform actions to fulfill the user's req
 
 export async function autoDroid({
   task,
-  llm = google("gemini-3-flash-preview"),
+  llm = "gemini-3-flash-preview",
   maxSteps = 100,
   maxRetries = 3,
   verbose = false,
@@ -65,9 +63,9 @@ export async function autoDroid({
   onStep,
   signal,
 }: MobileUseOptions): Promise<MobileUseResult> {
-  // Enable logging if verbose
+  // Detailed debug logging if verbose
   if (verbose) {
-    logger.setEnabled(true);
+    logger.setLevel("debug");
   }
 
   const startTime = Date.now();
@@ -80,94 +78,147 @@ export async function autoDroid({
   await adbClient.init();
 
   try {
-    const computer = await createMobileComputer(adbClient);
-
-    const response = await generateText({
-      messages: [
-        {
-          role: "system",
-          content: MobileUsePrompt,
-        },
-        {
-          role: "user",
-          content: task,
-        },
-      ],
-      model: llm,
-      maxRetries,
-      maxSteps,
-      abortSignal: signal,
-      tools: {
-        openApp: tool({
-          parameters: z.object({
-            name: z
-              .string()
-              .describe(
-                "Package name of the app to open (e.g., com.google.android.dialer, com.instagram.android)"
-              ),
-          }),
-          description:
-            "Open an app on the Android device by its package name. Use listApps first if you're unsure of the exact package name.",
-          async execute({ name }) {
-            stepNumber++;
-            const step: StepInfo = {
-              stepNumber,
-              action: `openApp(${name})`,
-              timestamp: Date.now(),
-            };
-
-            try {
-              await adbClient.openApp(name);
-              step.result = "success";
-              logger.step(stepNumber, `Opened app: ${name}`);
-            } catch (error: any) {
-              step.result = `error: ${error.message}`;
-              logger.error(`Failed to open app: ${name} — ${error.message}`);
-            }
-            steps.push(step);
-            onStep?.(step);
-
-            return step.result === "success"
-              ? `Successfully opened ${name}`
-              : `Failed to open ${name}: ${step.result}`;
-          },
-        }),
-
-        listApps: tool({
-          parameters: z.object({
-            name: z.string().describe("Partial package name to filter (e.g., 'instagram', 'whatsapp')."),
-          }),
-          description:
-            "Search for installed apps by partial package name. Returns matching package names.",
-          async execute({ name }) {
-            stepNumber++;
-            const step: StepInfo = {
-              stepNumber,
-              action: `listApps(${name})`,
-              timestamp: Date.now(),
-            };
-
-            const list = await adbClient.listPackages(name);
-            step.result = `found ${list.length} packages`;
-            steps.push(step);
-            onStep?.(step);
-
-            logger.step(stepNumber, `Listed apps matching "${name}": ${list.length} results`);
-            return list.length > 0
-              ? list.join("\n")
-              : `No packages found matching "${name}".`;
-          },
-        }),
-
-        computer,
-      },
+    const ai = new GoogleGenAI({
+      apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
     });
+    const computerTool = await createMobileComputer(adbClient);
+
+    const openAppDecl: FunctionDeclaration = {
+      name: "openApp",
+      description: "Open an app on the Android device by its package name. Use listApps first if you're unsure of the exact package name.",
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          name: {
+            type: Type.STRING,
+            description: "Package name of the app to open (e.g., com.google.android.dialer, com.instagram.android)",
+          },
+        },
+        required: ["name"],
+      },
+    };
+
+    const listAppsDecl: FunctionDeclaration = {
+      name: "listApps",
+      description: "Search for installed apps by partial package name. Returns matching package names.",
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          name: {
+            type: Type.STRING,
+            description: "Partial package name to filter (e.g., 'instagram', 'whatsapp').",
+          },
+        },
+        required: ["name"],
+      },
+    };
+
+    const tools = [{ functionDeclarations: [openAppDecl, listAppsDecl, computerTool.declaration] }];
+
+    let currentHistory: Content[] = [
+      { role: "user", parts: [{ text: MobileUsePrompt }, { text: task }] }
+    ];
+
+    let finalResponseText = "";
+
+    // Initial call to set up the conversation with tools
+    await ai.models.generateContent({
+      model: llm,
+      contents: currentHistory,
+      config: {
+        tools: tools,
+      }
+    });
+
+    for (let step = 0; step < maxSteps; step++) {
+      if (signal?.aborted) throw new Error("Aborted");
+
+      const response = await ai.models.generateContent({
+        model: llm,
+        contents: currentHistory,
+        config: {
+          tools: tools,
+        }
+      });
+
+      const functionCalls = response.functionCalls;
+
+      // Extract text manually to avoid the SDK's warning about reading .text when function calls are present
+      let text = "";
+      const parts = response.candidates?.[0]?.content?.parts || [];
+      const textParts = parts.filter(p => p.text);
+      if (textParts.length > 0) {
+        text = textParts.map(p => p.text).join("");
+      }
+
+      // Add model response to history
+      currentHistory.push({ role: "model", parts });
+
+      if (text) {
+        logger.info(`Model: ${text}`);
+        finalResponseText = text;
+      }
+
+      if (!functionCalls || functionCalls.length === 0) {
+        // No more function calls, we are done
+        break;
+      }
+
+      // Execute tool calls
+      const toolResultsParts: Part[] = [];
+      for (const call of functionCalls) {
+        const name = call.name;
+        const args = call.args as any;
+        stepNumber++;
+        const stepInfo: StepInfo = {
+          stepNumber,
+          action: `${name}(${JSON.stringify(args)})`,
+          timestamp: Date.now(),
+        };
+
+        let result;
+        try {
+          if (name === "openApp") {
+            await adbClient.openApp(args.name);
+            result = `Successfully opened ${args.name}`;
+            logger.step(stepNumber, `Opened app: ${args.name}`);
+          } else if (name === "listApps") {
+            const list = await adbClient.listPackages(args.name);
+            result = list.length > 0 ? list.join("\n") : `No packages found matching "${args.name}".`;
+            logger.step(stepNumber, `Listed apps matching "${args.name}": ${list.length} results`);
+          } else if (name === "computer") {
+            const exeResult = await computerTool.execute(args);
+            result = typeof exeResult === 'object' && exeResult !== null && 'data' in exeResult ? 'Image returned' : exeResult;
+          } else {
+            result = `Unknown tool: ${name}`;
+          }
+          stepInfo.result = typeof result === "string" ? result : "success";
+        } catch (error: any) {
+          result = `error: ${error.message}`;
+          stepInfo.result = result;
+          logger.error(`Tool ${name} failed: ${error.message}`);
+        }
+
+        steps.push(stepInfo);
+        onStep?.(stepInfo);
+
+        toolResultsParts.push({
+          functionResponse: {
+            name: name,
+            response: { result },
+          }
+        });
+      }
+
+      // Add tool responses to history
+      currentHistory.push({ role: "user", parts: toolResultsParts });
+    }
 
     const totalDuration = Date.now() - startTime;
     logger.info(`Task completed in ${(totalDuration / 1000).toFixed(1)}s with ${steps.length} steps`);
 
     return {
-      text: response.text,
+      text: finalResponseText || "Task complete.",
       steps,
       totalDuration,
     };

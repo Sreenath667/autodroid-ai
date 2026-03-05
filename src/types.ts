@@ -1,5 +1,3 @@
-import { LanguageModel } from "ai";
-
 // ── Coordinates & Geometry ──────────────────────────────────────────
 
 export interface Coordinate {
@@ -64,7 +62,7 @@ export interface StepInfo {
 
 export interface MobileUseOptions {
     task: string;
-    llm?: LanguageModel;
+    llm?: string;
     maxSteps?: number;
     maxRetries?: number;
     verbose?: boolean;
