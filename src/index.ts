@@ -2,7 +2,7 @@ import { generateText, LanguageModel, tool } from "ai";
 import { z } from "zod";
 import { ADBClient } from "./adb_client";
 import { createMobileComputer } from "./mobile_computer";
-import { openai } from "@ai-sdk/openai";
+import { google } from "@ai-sdk/google";
 import { logger } from "./logger";
 import type { MobileUseOptions, MobileUseResult, StepInfo } from "./types";
 export { autoDroid as mobileUse }; // backward compat alias
@@ -57,7 +57,7 @@ Your job is to navigate the device and perform actions to fulfill the user's req
 
 export async function autoDroid({
   task,
-  llm = openai("gpt-4o"),
+  llm = google("gemini-3-flash-preview"),
   maxSteps = 100,
   maxRetries = 3,
   verbose = false,

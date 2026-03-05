@@ -28,11 +28,11 @@ const argv = yargs(hideBin(process.argv))
     alias: "l",
     describe: "LLM provider to use",
     choices: ["openai", "anthropic", "google", "azure", "openrouter"],
-    default: "openai",
+    default: "google",
   })
   .option("model", {
     alias: "m",
-    describe: "Model name (e.g., gpt-4o, claude-3-5-sonnet-20241022)",
+    describe: "Model name (e.g., gpt-4o, claude-3-5-sonnet)",
     type: "string",
   })
   .option("max-steps", {
@@ -61,7 +61,7 @@ function getLLM(provider, modelName) {
   const defaultModels = {
     openai: "gpt-4o",
     anthropic: "claude-3-5-sonnet-20241022",
-    google: "gemini-2.0-flash",
+    google: "gemini-3-flash-preview",
     azure: "gpt-4o",
     openrouter: "anthropic/claude-3.5-sonnet",
   };

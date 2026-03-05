@@ -21,12 +21,16 @@ Think RPA, but for mobile — built for devs, hackers, and productivity nerds.
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Setup & Manual Run
 
-### 📦 Install via npm
-
+### 1. Install Dependencies
 ```bash
-npm install autodroid-ai
+npm install
+```
+
+### 2. Build the Project
+```bash
+npm run build
 ```
 
 ---
@@ -34,7 +38,7 @@ npm install autodroid-ai
 ## 🧠 AI in Action
 
 ```ts
-import { autoDroid } from "autodroid-ai";
+import { autoDroid } from "./src"; // Local import
 
 const response = await autoDroid({
   task: "Open instagram and go to direct messages, send hi to first person",
@@ -43,8 +47,8 @@ const response = await autoDroid({
 console.log(response.text);
 ```
 
-> Default model: GPT-4o (via OpenAI).
-> Set `OPENAI_API_KEY` in your `.env` or environment to use it.
+> Default model: Gemini 3 Flash Preview (via Google).
+> Set `GOOGLE_GENERATIVE_AI_API_KEY` in your `.env` or environment to use it.
 > You can also use Anthropic, Google, Azure, or OpenRouter.
 
 ---
@@ -53,16 +57,16 @@ console.log(response.text);
 
 ```bash
 # Run a task directly from your terminal
-npx autodroid-ai "Open Instagram and send 'hi'"
+./bin/run "Open Instagram and send 'hi'"
 
 # Run a task from a file
-npx autodroid-ai instruction.txt
+./bin/run instruction.txt
 
 # Use a different LLM provider
-npx autodroid-ai "Open Settings" --llm anthropic
+./bin/run "Open Settings" --llm anthropic
 
 # Enable verbose logging
-npx autodroid-ai "Open Settings" -v
+./bin/run "Open Settings" -v
 ```
 
 ### CLI Options
@@ -82,14 +86,6 @@ npx autodroid-ai "Open Settings" -v
 - Android phone or Emulator running in background (iOS not supported yet)
 - [Android SDK Platform Tools](https://developer.android.com/studio/releases/platform-tools) installed (`adb`)
 - USB Debugging enabled
-
----
-
-## 🧩 What's Coming Next?
-
-- iOS support (experimental)
-- Visual workflows
-- Common protocol for mobiles, browsers and computers
 
 ---
 
