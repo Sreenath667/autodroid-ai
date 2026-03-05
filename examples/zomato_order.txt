@@ -1,0 +1,5 @@
+1. Open zomato app
+2. Set default address to bangalore, house 951 (Home)
+3. Go to delivery part of zomato
+4. Search for masala chaas.
+5. Order masala chaas and complete the payment using default payment option.

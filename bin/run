@@ -1,0 +1,137 @@
+#!/usr/bin/env node
+
+const { autoDroid } = require("../dist");
+const { readFile, access } = require("node:fs/promises");
+const yargs = require("yargs");
+const { hideBin } = require("yargs/helpers");
+const { version } = require("../package.json");
+
+// ── Colors ──────────────────────────────────────────────────────────
+const c = {
+  reset: "\x1b[0m",
+  bold: "\x1b[1m",
+  dim: "\x1b[2m",
+  red: "\x1b[31m",
+  green: "\x1b[32m",
+  yellow: "\x1b[33m",
+  blue: "\x1b[34m",
+  magenta: "\x1b[35m",
+  cyan: "\x1b[36m",
+  white: "\x1b[37m",
+};
+
+const argv = yargs(hideBin(process.argv))
+  .usage(`${c.bold}${c.cyan}🤖 AutoDroid AI${c.reset} ${c.dim}v${version}${c.reset}\n\n${c.yellow}Usage:${c.reset} $0 ${c.green}<task>${c.reset} [options]`)
+  .version(version)
+  .demandCommand(1, `${c.red}✖ Please provide either a task string or a path to a task file${c.reset}`)
+  .option("llm", {
+    alias: "l",
+    describe: "LLM provider to use",
+    choices: ["openai", "anthropic", "google", "azure", "openrouter"],
+    default: "openai",
+  })
+  .option("model", {
+    alias: "m",
+    describe: "Model name (e.g., gpt-4o, claude-3-5-sonnet-20241022)",
+    type: "string",
+  })
+  .option("max-steps", {
+    describe: "Maximum number of AI steps",
+    type: "number",
+    default: 100,
+  })
+  .option("verbose", {
+    alias: "v",
+    describe: "Enable verbose logging",
+    type: "boolean",
+    default: false,
+  })
+  .option("device", {
+    alias: "d",
+    describe: "ADB device serial number",
+    type: "string",
+  })
+  .example(`$0 ${c.green}"Open Instagram and send hi"${c.reset}`, "Run a task directly")
+  .example(`$0 ${c.green}task.txt${c.reset}`, "Run a task from a file")
+  .example(`$0 ${c.green}"Open Settings"${c.reset} ${c.yellow}--llm anthropic${c.reset}`, "Use Anthropic")
+  .example(`$0 ${c.green}"Open Settings"${c.reset} ${c.yellow}-v${c.reset}`, "Verbose logging")
+  .help().argv;
+
+function getLLM(provider, modelName) {
+  const defaultModels = {
+    openai: "gpt-4o",
+    anthropic: "claude-3-5-sonnet-20241022",
+    google: "gemini-2.0-flash",
+    azure: "gpt-4o",
+    openrouter: "anthropic/claude-3.5-sonnet",
+  };
+
+  const model = modelName || defaultModels[provider] || "gpt-4o";
+
+  switch (provider) {
+    case "openai": {
+      const { openai } = require("@ai-sdk/openai");
+      return openai(model);
+    }
+    case "anthropic": {
+      const { anthropic } = require("@ai-sdk/anthropic");
+      return anthropic(model);
+    }
+    case "google": {
+      const { google } = require("@ai-sdk/google");
+      return google(model);
+    }
+    case "azure": {
+      const { azure } = require("@ai-sdk/azure");
+      return azure(model);
+    }
+    case "openrouter": {
+      const { createOpenRouter } = require("@openrouter/ai-sdk-provider");
+      const openrouter = createOpenRouter();
+      return openrouter(model);
+    }
+    default:
+      throw new Error(`Unknown LLM provider: ${provider}`);
+  }
+}
+
+async function run() {
+  const input = argv._[0].toString();
+  let task;
+
+  // Check if input is a file path or a direct task string
+  try {
+    await access(input);
+    task = (await readFile(input, "utf-8")).trim();
+    if (argv.verbose) {
+      console.log(`${c.dim}📄 Loaded task from file: ${input}${c.reset}`);
+    }
+  } catch {
+    task = input;
+  }
+
+  console.log(`\n${c.bold}${c.cyan}🤖 AutoDroid AI${c.reset} ${c.dim}v${version}${c.reset}`);
+  console.log(`${c.magenta}🧠 ${argv.llm}${c.reset} ${c.dim}|${c.reset} ${c.yellow}${argv.model || "default model"}${c.reset}`);
+  console.log(`${c.green}📋 Task:${c.reset} ${task.split("\n")[0]}${task.includes("\n") ? ` ${c.dim}(+${task.split("\n").length - 1} more lines)${c.reset}` : ""}`);
+  console.log(`${c.dim}${"─".repeat(50)}${c.reset}\n`);
+
+  const llm = getLLM(argv.llm, argv.model);
+
+  const response = await autoDroid({
+    task,
+    llm,
+    maxSteps: argv.maxSteps,
+    verbose: argv.verbose,
+  });
+
+  return response.text;
+}
+
+run()
+  .catch((error) => {
+    console.error(`\n${c.red}${c.bold}❌ Error:${c.reset} ${c.red}${error.message || error}${c.reset}`);
+    process.exit(1);
+  })
+  .then((result) => {
+    console.log(`\n${c.green}${c.bold}✅ Result:${c.reset} ${result}`);
+  });

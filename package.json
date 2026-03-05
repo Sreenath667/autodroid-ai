@@ -1,0 +1,55 @@
+{
+  "name": "autodroid-ai",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "dev": "tsup src/index.ts --dts --watch",
+    "build": "tsup src/index.ts --dts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": {
+    "autodroid-ai": "./bin/run"
+  },
+  "license": "MIT",
+  "description": "AutoDroid AI — Use AI to control your Android phone with natural language",
+  "keywords": [
+    "autodroid",
+    "android",
+    "adb",
+    "automation",
+    "ai",
+    "rpa",
+    "llm",
+    "autodroid-ai",
+    "computer-use",
+    "mobile"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^1.1.17",
+    "@ai-sdk/azure": "^1.2.7",
+    "@ai-sdk/google": "^1.1.25",
+    "@ai-sdk/openai": "^1.2.5",
+    "@openrouter/ai-sdk-provider": "^0.4.3",
+    "ai": "^4.1.61",
+    "fast-xml-parser": "^5.0.9",
+    "playwright": "^1.51.1",
+    "sharp": "^0.33.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "yargs": "^17.7.2",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "tsup": "^8.4.0"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "src"
+  ]
+}
