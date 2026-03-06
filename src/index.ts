@@ -78,9 +78,14 @@ export async function autoDroid({
   await adbClient.init();
 
   try {
-    const ai = new GoogleGenAI({
-      apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
-    });
+    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+    if (!apiKey) {
+      throw new Error("Google Generative AI API key is missing. Please set GOOGLE_GENERATIVE_AI_API_KEY in your .env.local file.");
+    }
+
+    logger.debug(`Using API Key: ${apiKey.slice(0, 6)}...${apiKey.slice(-4)}`);
+
+    const ai = new GoogleGenAI({ apiKey });
     const computerTool = await createMobileComputer(adbClient);
 
     const openAppDecl: FunctionDeclaration = {

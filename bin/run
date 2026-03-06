@@ -1,17 +1,15 @@
 #!/usr/bin/env node
 
-require("dotenv").config();
-require("dotenv").config({ path: ".env.local", override: true });
+// ── Environment ─────────────────────────────────────────────────────
+const dotenv = require("dotenv");
+dotenv.config();
+const localEnv = dotenv.config({ path: ".env.local", override: true });
 
 const { autoDroid } = require("../dist");
 const { readFile, access } = require("node:fs/promises");
 const yargs = require("yargs");
 const { hideBin } = require("yargs/helpers");
 const { version } = require("../package.json");
-
-// ── Environment ─────────────────────────────────────────────────────
-require("dotenv").config();
-require("dotenv").config({ path: ".env.local", override: true });
 
 // ── Colors ──────────────────────────────────────────────────────────
 const c = {
@@ -82,6 +80,16 @@ async function run() {
   console.log(`\n${c.bold}${c.cyan}🤖 AutoDroid AI${c.reset} ${c.dim}v${version}${c.reset}`);
   const modelStr = argv.model || "gemini-3-flash-preview";
   console.log(`${c.magenta}🧠 Google Gen AI${c.reset} ${c.dim}|${c.reset} ${c.yellow}${modelStr}${c.reset}`);
+
+  const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (argv.verbose) {
+    if (apiKey) {
+      console.log(`${c.dim}🔑 API Key found: ${apiKey.slice(0, 6)}...${apiKey.slice(-4)}${c.reset}`);
+    } else {
+      console.log(`${c.red}⚠️  No API Key found in environment variables!${c.reset}`);
+    }
+  }
+
   console.log(`${c.green}📋 Task:${c.reset} ${task.split("\n")[0]}${task.includes("\n") ? ` ${c.dim}(+${task.split("\n").length - 1} more lines)${c.reset}` : ""}`);
   console.log(`${c.dim}${"─".repeat(50)}${c.reset}\n`);
 
